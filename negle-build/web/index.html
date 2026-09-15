@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Negle</title>
+<style>
+  :root{
+    --bg:#0f1720; --panel:#182430; --panel2:#1f2e3d; --accent:#5ec9a6; --accent2:#e0b354;
+    --text:#eaf2f0; --muted:#8fa3af; --bad:#e0685e; --border:#2b3b48; --ring2:#4a6272;
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      --bg:#f4f7f6; --panel:#ffffff; --panel2:#eef3f2; --accent:#1e8f6f; --accent2:#a3701a;
+      --text:#16211f; --muted:#5b6f6c; --bad:#c0392b; --border:#dbe4e2; --ring2:#9db3af;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0f1720; --panel:#182430; --panel2:#1f2e3d; --accent:#5ec9a6; --accent2:#e0b354;
+    --text:#eaf2f0; --muted:#8fa3af; --bad:#e0685e; --border:#2b3b48; --ring2:#4a6272;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    background:var(--bg); color:var(--text); min-height:100vh;
+    display:flex; justify-content:center; padding:24px 12px;
+  }
+  .wrap{width:100%; max-width:600px;}
+  h1{font-size:28px; letter-spacing:2px; text-align:center; margin:0 0 2px; font-weight:800; color:var(--accent);}
+  .sub{text-align:center; color:var(--muted); font-size:13px; margin-bottom:18px;}
+  .card{background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:18px; margin-bottom:16px;}
+  .stage{
+    position:relative; width:100%; aspect-ratio:1/1; max-width:420px; margin:0 auto;
+    background:var(--panel2); border-radius:14px; overflow:hidden;
+  }
+  .dot{
+    position:absolute; border-radius:50%; background:var(--accent);
+    transform:translate(-50%,-50%); display:flex; align-items:center; justify-content:center;
+  }
+  .dot.ring2{background:var(--ring2); opacity:0.7;}
+  .lbl{
+    position:absolute; transform:translate(-50%, 4px); font-size:11px; color:var(--text);
+    white-space:nowrap; font-weight:600; text-shadow:0 1px 3px var(--panel2);
+  }
+  .lbl.ring2{color:var(--muted); font-weight:500; font-size:10px;}
+  .target-mark{
+    position:absolute; width:34px; height:34px; border-radius:50%; border:2px dashed var(--accent2);
+    transform:translate(-50%,-50%); display:flex; align-items:center; justify-content:center;
+    font-size:15px; color:var(--accent2); left:50%; top:50%;
+  }
+  .meta-row{display:flex; justify-content:space-between; font-size:12px; color:var(--muted); margin-top:10px;}
+  .hint-box{
+    margin-top:10px; padding:10px 12px; border-radius:10px; background:var(--panel2);
+    border:1px dashed var(--border); font-size:13px; color:var(--accent2); display:none;
+  }
+  .hint-box.show{display:block;}
+  .guess-row{display:flex; gap:8px; margin-top:14px;}
+  input[type=text]{
+    flex:1; padding:11px 14px; border-radius:10px; border:1px solid var(--border);
+    background:var(--panel2); color:var(--text); font-size:15px; outline:none;
+  }
+  input[type=text]:focus{border-color:var(--accent);}
+  button{padding:11px 18px; border-radius:10px; border:none; background:var(--accent); color:#08211a; font-weight:700; font-size:14px; cursor:pointer;}
+  button:disabled{opacity:0.5; cursor:default;}
+  button.secondary{background:var(--panel2); color:var(--text); border:1px solid var(--border);}
+  .history{display:flex; flex-direction:column; gap:8px; margin-top:6px;}
+  .guess-item{
+    display:grid; grid-template-columns:1fr auto auto; gap:10px; align-items:center;
+    background:var(--panel2); border:1px solid var(--border); border-radius:10px;
+    padding:9px 12px; font-size:13px;
+  }
+  .guess-item .name{font-weight:600;}
+  .arrow{font-size:16px; color:var(--accent2);}
+  .badge{font-size:11px; padding:3px 8px; border-radius:20px; background:var(--border); color:var(--muted);}
+  .badge.hot{background:rgba(224,104,94,0.18); color:var(--bad);}
+  .badge.warm{background:rgba(224,179,84,0.18); color:var(--accent2);}
+  .badge.cold{background:rgba(94,201,166,0.18); color:var(--accent);}
+  .win-banner{text-align:center; padding:14px; border-radius:12px; background:rgba(94,201,166,0.15); border:1px solid var(--accent); margin-top:14px; display:none;}
+  .win-banner h3{margin:0 0 4px; color:var(--accent); font-size:18px;}
+  .footer-row{display:flex; justify-content:space-between; align-items:center; margin-top:16px; gap:8px; flex-wrap:wrap;}
+  .stat{font-size:12px; color:var(--muted);}
+  .stat b{color:var(--text); font-size:15px;}
+  .mode-row{display:flex; justify-content:center; gap:8px; margin-bottom:14px;}
+  .mode-btn{
+    padding:6px 14px; border-radius:20px; border:1px solid var(--border); background:var(--panel);
+    color:var(--muted); font-size:12px; font-weight:600; cursor:pointer;
+  }
+  .mode-btn.active{background:var(--accent); color:#08211a; border-color:var(--accent);}
+  .share-row{display:flex; gap:8px; margin-top:10px;}
+  .share-row button{flex:1;}
+  #shareBtn{background:var(--panel2); color:var(--text); border:1px solid var(--accent); }
+  #shareBtn.copied{background:var(--accent); color:#08211a; border-color:var(--accent);}
+  .guess-dots{text-align:center; font-size:20px; letter-spacing:4px; margin:10px 0 0;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>NEGLE</h1>
+  <div class="sub">its neighbors are all in place. the country itself is a blank. name what's missing.</div>
+
+  <div class="mode-row">
+    <button class="mode-btn active" id="dailyModeBtn">Daily #<span id="puzzleNum"></span></button>
+    <button class="mode-btn" id="practiceModeBtn">Practice (random)</button>
+  </div>
+
+  <div class="card">
+    <div class="stage" id="stage">
+      <div class="target-mark">?</div>
+    </div>
+    <div class="meta-row">
+      <span id="ringinfo">1st-ring neighbors shown</span>
+      <span id="guessnum">guess 1</span>
+    </div>
+    <div class="hint-box" id="hintLetters"></div>
+    <div class="hint-box" id="hintSize"></div>
+
+    <div class="guess-row">
+      <input type="text" id="guessInput" placeholder="Type a country..." list="countryList" autocomplete="off">
+      <button id="guessBtn">Guess</button>
+    </div>
+    <datalist id="countryList"></datalist>
+
+    <div class="history" id="history"></div>
+
+    <div class="win-banner" id="winBanner">
+      <h3 id="winTitle"></h3>
+      <div id="winSub" class="stat"></div>
+      <div class="share-row">
+        <button id="shareBtn">📋 Copy result</button>
+      </div>
+    </div>
+
+    <div class="footer-row">
+      <div class="stat">Guesses: <b id="guessCount">0</b>/6</div>
+      <button class="secondary" id="giveUpBtn">Give up</button>
+      <button id="newGameBtn" style="display:none;">Play again</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DATA = {"countries":[{"name":"Fiji","centroid":[178.57,-17.32],"areaKm2":19348,"neighbors":[]},{"name":"Tanzania","centroid":[34.74,-6.25],"areaKm2":936830,"neighbors":[{"name":"Dem. Rep. Congo","centroid":[23.58,-2.84]},{"name":"Kenya","centroid":[37.79,0.6]},{"name":"Zambia","centroid":[27.76,-13.39]},{"name":"Malawi","centroid":[34.19,-13.16]},{"name":"Mozambique","centroid":[35.54,-17.15]},{"name":"Burundi","centroid":[29.91,-3.38]},{"name":"Uganda","centroid":[32.36,1.3]},{"name":"Rwanda","centroid":[29.92,-2.01]}]},{"name":"W. Sahara","centroid":[-12.19,24.28],"areaKm2":96451,"neighbors":[{"name":"Mauritania","centroid":[-10.35,20.18]},{"name":"Algeria","centroid":[2.61,28.09]},{"name":"Morocco","centroid":[-8.69,29.82]}]},{"name":"Canada","centroid":[-96.4,60.48],"areaKm2":9984335,"neighbors":[{"name":"United States of America","centroid":[-103.57,44.76]}]},{"name":"United States of America","centroid":[-103.57,44.76],"areaKm2":9494297,"neighbors":[{"name":"Canada","centroid":[-96.4,60.48]},{"name":"Mexico","centroid":[-102.22,23.91]}]},{"name":"Kazakhstan","centroid":[67.24,48.41],"areaKm2":2721772,"neighbors":[{"name":"Uzbekistan","centroid":[63.37,41.77]},{"name":"Russia","centroid":[95.79,66.07]},{"name":"Kyrgyzstan","centroid":[74.59,41.52]},{"name":"Turkmenistan","centroid":[59.35,39.1]},{"name":"China","centroid":[103.45,36.68]}]},{"name":"Uzbekistan","centroid":[63.37,41.77],"areaKm2":460705,"neighbors":[{"name":"Kazakhstan","centroid":[67.24,48.41]},{"name":"Afghanistan","centroid":[66,33.84]},{"name":"Tajikistan","centroid":[71.05,38.59]},{"name":"Kyrgyzstan","centroid":[74.59,41.52]},{"name":"Turkmenistan","centroid":[59.35,39.1]}]},{"name":"Papua New Guinea","centroid":[145.31,-6.46],"areaKm2":466499,"neighbors":[{"name":"Indonesia","centroid":[117.36,-2.27]}]},{"name":"Indonesia","centroid":[117.36,-2.27],"areaKm2":1827547,"neighbors":[{"name":"Papua New Guinea","centroid":[145.31,-6.46]},{"name":"Timor-Leste","centroid":[125.97,-8.77]},{"name":"Malaysia","centroid":[109.7,3.75]}]},{"name":"Argentina","centroid":[-64.75,-34.74],"areaKm2":2784434,"neighbors":[{"name":"Chile","centroid":[-71.18,-37.31]},{"name":"Uruguay","centroid":[-56.01,-32.77]},{"name":"Brazil","centroid":[-53.17,-10.66]},{"name":"Bolivia","centroid":[-64.65,-16.7]},{"name":"Paraguay","centroid":[-58.43,-23.23]}]},{"name":"Chile","centroid":[-71.18,-37.31],"areaKm2":814460,"neighbors":[{"name":"Argentina","centroid":[-64.75,-34.74]},{"name":"Bolivia","centroid":[-64.65,-16.7]},{"name":"Peru","centroid":[-74.43,-9.15]}]},{"name":"Dem. Rep. Congo","centroid":[23.58,-2.84],"areaKm2":2333672,"neighbors":[{"name":"Tanzania","centroid":[34.74,-6.25]},{"name":"Central African Rep.","centroid":[20.37,6.55]},{"name":"Congo","centroid":[15.14,-0.84]},{"name":"Zambia","centroid":[27.76,-13.39]},{"name":"Angola","centroid":[17.47,-12.23]},{"name":"Burundi","centroid":[29.91,-3.38]},{"name":"Uganda","centroid":[32.36,1.3]},{"name":"Rwanda","centroid":[29.92,-2.01]},{"name":"S. Sudan","centroid":[30.2,7.29]}]},{"name":"Somalia","centroid":[45.7,4.74],"areaKm2":486626,"neighbors":[{"name":"Kenya","centroid":[37.79,0.6]},{"name":"Ethiopia","centroid":[39.56,8.65]},{"name":"Somaliland","centroid":[46.23,9.76]}]},{"name":"Kenya","centroid":[37.79,0.6],"areaKm2":593549,"neighbors":[{"name":"Tanzania","centroid":[34.74,-6.25]},{"name":"Somalia","centroid":[45.7,4.74]},{"name":"Ethiopia","centroid":[39.56,8.65]},{"name":"Uganda","centroid":[32.36,1.3]},{"name":"S. Sudan","centroid":[30.2,7.29]}]},{"name":"Sudan","centroid":[29.83,15.97],"areaKm2":1857282,"neighbors":[{"name":"Chad","centroid":[18.57,15.28]},{"name":"Central African Rep.","centroid":[20.37,6.55]},{"name":"Eritrea","centroid":[38.69,15.43]},{"name":"Egypt","centroid":[29.86,26.47]},{"name":"Libya","centroid":[18.03,26.99]},{"name":"Ethiopia","centroid":[39.56,8.65]},{"name":"S. Sudan","centroid":[30.2,7.29]}]},{"name":"Chad","centroid":[18.57,15.28],"areaKm2":1276023,"neighbors":[{"name":"Sudan","centroid":[29.83,15.97]},{"name":"Niger","centroid":[9.27,17.34]},{"name":"Cameroon","centroid":[12.61,5.65]},{"name":"Central African Rep.","centroid":[20.37,6.55]},{"name":"Libya","centroid":[18.03,26.99]}]},{"name":"Haiti","centroid":[-72.66,18.9],"areaKm2":28626,"neighbors":[{"name":"Dominican Rep.","centroid":[-70.46,18.89]}]},{"name":"Dominican Rep.","centroid":[-70.46,18.89],"areaKm2":48260,"neighbors":[{"name":"Haiti","centroid":[-72.66,18.9]}]},{"name":"Russia","centroid":[95.79,66.07],"areaKm2":16924392,"neighbors":[{"name":"Kazakhstan","centroid":[67.24,48.41]},{"name":"Norway","centroid":[12.83,66.65]},{"name":"North Korea","centroid":[127.13,40.13]},{"name":"Mongolia","centroid":[103.02,46.95]},{"name":"Belarus","centroid":[27.96,53.5]},{"name":"Ukraine","centroid":[31.29,49.19]},{"name":"Poland","centroid":[19.34,52.13]},{"name":"Lithuania","centroid":[23.89,55.28]},{"name":"Latvia","centroid":[24.84,56.82]},{"name":"Estonia","centroid":[25.83,58.64]},{"name":"China","centroid":[103.45,36.68]},{"name":"Azerbaijan","centroid":[47.56,40.22]},{"name":"Georgia","centroid":[43.5,42.17]},{"name":"Finland","centroid":[26.14,64.26]}]},{"name":"Bahamas","centroid":[-77.93,25.51],"areaKm2":15617,"neighbors":[]},{"name":"Falkland Is.","centroid":[-59.42,-51.72],"areaKm2":16294,"neighbors":[]},{"name":"Norway","centroid":[12.83,66.65],"areaKm2":395405,"neighbors":[{"name":"Russia","centroid":[95.79,66.07]},{"name":"Sweden","centroid":[16.11,62.42]},{"name":"Finland","centroid":[26.14,64.26]}]},{"name":"Greenland","centroid":[-41.96,73.15],"areaKm2":2189751,"neighbors":[]},{"name":"Timor-Leste","centroid":[125.97,-8.77],"areaKm2":14788,"neighbors":[{"name":"Indonesia","centroid":[117.36,-2.27]}]},{"name":"South Africa","centroid":[25.16,-28.92],"areaKm2":1218034,"neighbors":[{"name":"Lesotho","centroid":[28.17,-29.62]},{"name":"Zimbabwe","centroid":[29.79,-18.9]},{"name":"Botswana","centroid":[23.78,-22.08]},{"name":"Namibia","centroid":[17.14,-22.04]},{"name":"Mozambique","centroid":[35.54,-17.15]},{"name":"eSwatini","centroid":[31.4,-26.49]}]},{"name":"Lesotho","centroid":[28.17,-29.62],"areaKm2":27538,"neighbors":[{"name":"South Africa","centroid":[25.16,-28.92]}]},{"name":"Mexico","centroid":[-102.22,23.91],"areaKm2":1973928,"neighbors":[{"name":"United States of America","centroid":[-103.57,44.76]},{"name":"Guatemala","centroid":[-90.37,15.7]},{"name":"Belize","centroid":[-88.7,17.19]}]},{"name":"Uruguay","centroid":[-56.01,-32.77],"areaKm2":176982,"neighbors":[{"name":"Argentina","centroid":[-64.75,-34.74]},{"name":"Brazil","centroid":[-53.17,-10.66]}]},{"name":"Brazil","centroid":[-53.17,-10.66],"areaKm2":8540744,"neighbors":[{"name":"Argentina","centroid":[-64.75,-34.74]},{"name":"Uruguay","centroid":[-56.01,-32.77]},{"name":"Bolivia","centroid":[-64.65,-16.7]},{"name":"Peru","centroid":[-74.43,-9.15]},{"name":"Colombia","centroid":[-73.07,3.92]},{"name":"Venezuela","centroid":[-66.15,7.16]},{"name":"Guyana","centroid":[-58.97,4.79]},{"name":"Suriname","centroid":[-55.91,4.12]},{"name":"France","centroid":[-6.8,43.14]},{"name":"Paraguay","centroid":[-58.43,-23.23]}]},{"name":"Bolivia","centroid":[-64.65,-16.7],"areaKm2":1088941,"neighbors":[{"name":"Argentina","centroid":[-64.75,-34.74]},{"name":"Chile","centroid":[-71.18,-37.31]},{"name":"Brazil","centroid":[-53.17,-10.66]},{"name":"Peru","centroid":[-74.43,-9.15]},{"name":"Paraguay","centroid":[-58.43,-23.23]}]},{"name":"Peru","centroid":[-74.43,-9.15],"areaKm2":1315160,"neighbors":[{"name":"Chile","centroid":[-71.18,-37.31]},{"name":"Brazil","centroid":[-53.17,-10.66]},{"name":"Bolivia","centroid":[-64.65,-16.7]},{"name":"Colombia","centroid":[-73.07,3.92]},{"name":"Ecuador","centroid":[-78.38,-1.45]}]},{"name":"Colombia","centroid":[-73.07,3.92],"areaKm2":1157016,"neighbors":[{"name":"Brazil","centroid":[-53.17,-10.66]},{"name":"Peru","centroid":[-74.43,-9.15]},{"name":"Panama","centroid":[-80.11,8.53]},{"name":"Venezuela","centroid":[-66.15,7.16]},{"name":"Ecuador","centroid":[-78.38,-1.45]}]},{"name":"Panama","centroid":[-80.11,8.53],"areaKm2":75595,"neighbors":[{"name":"Colombia","centroid":[-73.07,3.92]},{"name":"Costa Rica","centroid":[-84.17,9.97]}]},{"name":"Costa Rica","centroid":[-84.17,9.97],"areaKm2":54059,"neighbors":[{"name":"Panama","centroid":[-80.11,8.53]},{"name":"Nicaragua","centroid":[-85.02,12.85]}]},{"name":"Nicaragua","centroid":[-85.02,12.85],"areaKm2":130020,"neighbors":[{"name":"Costa Rica","centroid":[-84.17,9.97]},{"name":"Honduras","centroid":[-86.59,14.83]}]},{"name":"Honduras","centroid":[-86.59,14.83],"areaKm2":114193,"neighbors":[{"name":"Nicaragua","centroid":[-85.02,12.85]},{"name":"El Salvador","centroid":[-88.87,13.73]},{"name":"Guatemala","centroid":[-90.37,15.7]}]},{"name":"El Salvador","centroid":[-88.87,13.73],"areaKm2":20970,"neighbors":[{"name":"Honduras","centroid":[-86.59,14.83]},{"name":"Guatemala","centroid":[-90.37,15.7]}]},{"name":"Guatemala","centroid":[-90.37,15.7],"areaKm2":109851,"neighbors":[{"name":"Mexico","centroid":[-102.22,23.91]},{"name":"Honduras","centroid":[-86.59,14.83]},{"name":"El Salvador","centroid":[-88.87,13.73]},{"name":"Belize","centroid":[-88.7,17.19]}]},{"name":"Belize","centroid":[-88.7,17.19],"areaKm2":22097,"neighbors":[{"name":"Mexico","centroid":[-102.22,23.91]},{"name":"Guatemala","centroid":[-90.37,15.7]}]},{"name":"Venezuela","centroid":[-66.15,7.16],"areaKm2":912350,"neighbors":[{"name":"Brazil","centroid":[-53.17,-10.66]},{"name":"Colombia","centroid":[-73.07,3.92]},{"name":"Guyana","centroid":[-58.97,4.79]}]},{"name":"Guyana","centroid":[-58.97,4.79],"areaKm2":210761,"neighbors":[{"name":"Brazil","centroid":[-53.17,-10.66]},{"name":"Venezuela","centroid":[-66.15,7.16]},{"name":"Suriname","centroid":[-55.91,4.12]}]},{"name":"Suriname","centroid":[-55.91,4.12],"areaKm2":144945,"neighbors":[{"name":"Brazil","centroid":[-53.17,-10.66]},{"name":"Guyana","centroid":[-58.97,4.79]},{"name":"France","centroid":[-6.8,43.14]}]},{"name":"France","centroid":[-6.8,43.14],"areaKm2":643816,"neighbors":[{"name":"Brazil","centroid":[-53.17,-10.66]},{"name":"Suriname","centroid":[-55.91,4.12]},{"name":"Germany","centroid":[10.27,51.08]},{"name":"Switzerland","centroid":[8.12,46.79]},{"name":"Luxembourg","centroid":[5.97,49.76]},{"name":"Belgium","centroid":[4.59,50.65]},{"name":"Spain","centroid":[-3.62,40.32]},{"name":"Italy","centroid":[12.27,42.67]}]},{"name":"Ecuador","centroid":[-78.38,-1.45],"areaKm2":251869,"neighbors":[{"name":"Peru","centroid":[-74.43,-9.15]},{"name":"Colombia","centroid":[-73.07,3.92]}]},{"name":"Puerto Rico","centroid":[-66.48,18.24],"areaKm2":9268,"neighbors":[]},{"name":"Jamaica","centroid":[-77.32,18.14],"areaKm2":12483,"neighbors":[]},{"name":"Cuba","centroid":[-78.93,21.65],"areaKm2":115201,"neighbors":[]},{"name":"Zimbabwe","centroid":[29.79,-18.9],"areaKm2":377473,"neighbors":[{"name":"South Africa","centroid":[25.16,-28.92]},{"name":"Botswana","centroid":[23.78,-22.08]},{"name":"Zambia","centroid":[27.76,-13.39]},{"name":"Mozambique","centroid":[35.54,-17.15]}]},{"name":"Botswana","centroid":[23.78,-22.08],"areaKm2":593403,"neighbors":[{"name":"South Africa","centroid":[25.16,-28.92]},{"name":"Zimbabwe","centroid":[29.79,-18.9]},{"name":"Namibia","centroid":[17.14,-22.04]},{"name":"Zambia","centroid":[27.76,-13.39]}]},{"name":"Namibia","centroid":[17.14,-22.04],"areaKm2":827106,"neighbors":[{"name":"South Africa","centroid":[25.16,-28.92]},{"name":"Botswana","centroid":[23.78,-22.08]},{"name":"Zambia","centroid":[27.76,-13.39]},{"name":"Angola","centroid":[17.47,-12.23]}]},{"name":"Senegal","centroid":[-14.51,14.35],"areaKm2":195071,"neighbors":[{"name":"Mali","centroid":[-3.59,17.24]},{"name":"Mauritania","centroid":[-10.35,20.18]},{"name":"Guinea","centroid":[-11.06,10.45]},{"name":"Guinea-Bissau","centroid":[-15.11,12.02]},{"name":"Gambia","centroid":[-15.43,13.48]}]},{"name":"Mali","centroid":[-3.59,17.24],"areaKm2":1239555,"neighbors":[{"name":"Senegal","centroid":[-14.51,14.35]},{"name":"Mauritania","centroid":[-10.35,20.18]},{"name":"Niger","centroid":[9.27,17.34]},{"name":"Côte d'Ivoire","centroid":[-5.61,7.55]},{"name":"Guinea","centroid":[-11.06,10.45]},{"name":"Burkina Faso","centroid":[-1.78,12.31]},{"name":"Algeria","centroid":[2.61,28.09]}]},{"name":"Mauritania","centroid":[-10.35,20.18],"areaKm2":1057280,"neighbors":[{"name":"W. Sahara","centroid":[-12.19,24.28]},{"name":"Senegal","centroid":[-14.51,14.35]},{"name":"Mali","centroid":[-3.59,17.24]},{"name":"Algeria","centroid":[2.61,28.09]}]},{"name":"Benin","centroid":[2.34,9.64],"areaKm2":117487,"neighbors":[{"name":"Niger","centroid":[9.27,17.34]},{"name":"Nigeria","centroid":[7.99,9.54]},{"name":"Togo","centroid":[1,8.43]},{"name":"Burkina Faso","centroid":[-1.78,12.31]}]},{"name":"Niger","centroid":[9.27,17.34],"areaKm2":1186144,"neighbors":[{"name":"Chad","centroid":[18.57,15.28]},{"name":"Mali","centroid":[-3.59,17.24]},{"name":"Benin","centroid":[2.34,9.64]},{"name":"Nigeria","centroid":[7.99,9.54]},{"name":"Cameroon","centroid":[12.61,5.65]},{"name":"Burkina Faso","centroid":[-1.78,12.31]},{"name":"Algeria","centroid":[2.61,28.09]},{"name":"Libya","centroid":[18.03,26.99]}]},{"name":"Nigeria","centroid":[7.99,9.54],"areaKm2":908760,"neighbors":[{"name":"Benin","centroid":[2.34,9.64]},{"name":"Niger","centroid":[9.27,17.34]},{"name":"Cameroon","centroid":[12.61,5.65]}]},{"name":"Cameroon","centroid":[12.61,5.65],"areaKm2":462337,"neighbors":[{"name":"Chad","centroid":[18.57,15.28]},{"name":"Niger","centroid":[9.27,17.34]},{"name":"Nigeria","centroid":[7.99,9.54]},{"name":"Central African Rep.","centroid":[20.37,6.55]},{"name":"Congo","centroid":[15.14,-0.84]},{"name":"Gabon","centroid":[11.69,-0.65]},{"name":"Eq. Guinea","centroid":[10.37,1.65]}]},{"name":"Togo","centroid":[1,8.43],"areaKm2":61194,"neighbors":[{"name":"Benin","centroid":[2.34,9.64]},{"name":"Ghana","centroid":[-1.24,7.92]},{"name":"Burkina Faso","centroid":[-1.78,12.31]}]},{"name":"Ghana","centroid":[-1.24,7.92],"areaKm2":244474,"neighbors":[{"name":"Togo","centroid":[1,8.43]},{"name":"Côte d'Ivoire","centroid":[-5.61,7.55]},{"name":"Burkina Faso","centroid":[-1.78,12.31]}]},{"name":"Côte d'Ivoire","centroid":[-5.61,7.55],"areaKm2":331251,"neighbors":[{"name":"Mali","centroid":[-3.59,17.24]},{"name":"Ghana","centroid":[-1.24,7.92]},{"name":"Guinea","centroid":[-11.06,10.45]},{"name":"Liberia","centroid":[-9.41,6.43]},{"name":"Burkina Faso","centroid":[-1.78,12.31]}]},{"name":"Guinea","centroid":[-11.06,10.45],"areaKm2":240531,"neighbors":[{"name":"Senegal","centroid":[-14.51,14.35]},{"name":"Mali","centroid":[-3.59,17.24]},{"name":"Côte d'Ivoire","centroid":[-5.61,7.55]},{"name":"Guinea-Bissau","centroid":[-15.11,12.02]},{"name":"Liberia","centroid":[-9.41,6.43]},{"name":"Sierra Leone","centroid":[-11.8,8.53]}]},{"name":"Guinea-Bissau","centroid":[-15.11,12.02],"areaKm2":36323,"neighbors":[{"name":"Senegal","centroid":[-14.51,14.35]},{"name":"Guinea","centroid":[-11.06,10.45]}]},{"name":"Liberia","centroid":[-9.41,6.43],"areaKm2":98638,"neighbors":[{"name":"Côte d'Ivoire","centroid":[-5.61,7.55]},{"name":"Guinea","centroid":[-11.06,10.45]},{"name":"Sierra Leone","centroid":[-11.8,8.53]}]},{"name":"Sierra Leone","centroid":[-11.8,8.53],"areaKm2":76316,"neighbors":[{"name":"Guinea","centroid":[-11.06,10.45]},{"name":"Liberia","centroid":[-9.41,6.43]}]},{"name":"Burkina Faso","centroid":[-1.78,12.31],"areaKm2":272625,"neighbors":[{"name":"Mali","centroid":[-3.59,17.24]},{"name":"Benin","centroid":[2.34,9.64]},{"name":"Niger","centroid":[9.27,17.34]},{"name":"Togo","centroid":[1,8.43]},{"name":"Ghana","centroid":[-1.24,7.92]},{"name":"Côte d'Ivoire","centroid":[-5.61,7.55]}]},{"name":"Central African Rep.","centroid":[20.37,6.55],"areaKm2":624493,"neighbors":[{"name":"Dem. Rep. Congo","centroid":[23.58,-2.84]},{"name":"Sudan","centroid":[29.83,15.97]},{"name":"Chad","centroid":[18.57,15.28]},{"name":"Cameroon","centroid":[12.61,5.65]},{"name":"Congo","centroid":[15.14,-0.84]},{"name":"S. Sudan","centroid":[30.2,7.29]}]},{"name":"Congo","centroid":[15.14,-0.84],"areaKm2":341213,"neighbors":[{"name":"Dem. Rep. Congo","centroid":[23.58,-2.84]},{"name":"Cameroon","centroid":[12.61,5.65]},{"name":"Central African Rep.","centroid":[20.37,6.55]},{"name":"Gabon","centroid":[11.69,-0.65]},{"name":"Angola","centroid":[17.47,-12.23]}]},{"name":"Gabon","centroid":[11.69,-0.65],"areaKm2":270695,"neighbors":[{"name":"Cameroon","centroid":[12.61,5.65]},{"name":"Congo","centroid":[15.14,-0.84]},{"name":"Eq. Guinea","centroid":[10.37,1.65]}]},{"name":"Eq. Guinea","centroid":[10.37,1.65],"areaKm2":27244,"neighbors":[{"name":"Cameroon","centroid":[12.61,5.65]},{"name":"Gabon","centroid":[11.69,-0.65]}]},{"name":"Zambia","centroid":[27.76,-13.39],"areaKm2":754807,"neighbors":[{"name":"Tanzania","centroid":[34.74,-6.25]},{"name":"Dem. Rep. Congo","centroid":[23.58,-2.84]},{"name":"Zimbabwe","centroid":[29.79,-18.9]},{"name":"Botswana","centroid":[23.78,-22.08]},{"name":"Namibia","centroid":[17.14,-22.04]},{"name":"Malawi","centroid":[34.19,-13.16]},{"name":"Mozambique","centroid":[35.54,-17.15]},{"name":"Angola","centroid":[17.47,-12.23]}]},{"name":"Malawi","centroid":[34.19,-13.16],"areaKm2":111595,"neighbors":[{"name":"Tanzania","centroid":[34.74,-6.25]},{"name":"Zambia","centroid":[27.76,-13.39]},{"name":"Mozambique","centroid":[35.54,-17.15]}]},{"name":"Mozambique","centroid":[35.54,-17.15],"areaKm2":813662,"neighbors":[{"name":"Tanzania","centroid":[34.74,-6.25]},{"name":"South Africa","centroid":[25.16,-28.92]},{"name":"Zimbabwe","centroid":[29.79,-18.9]},{"name":"Zambia","centroid":[27.76,-13.39]},{"name":"Malawi","centroid":[34.19,-13.16]},{"name":"eSwatini","centroid":[31.4,-26.49]}]},{"name":"eSwatini","centroid":[31.4,-26.49],"areaKm2":18133,"neighbors":[{"name":"South Africa","centroid":[25.16,-28.92]},{"name":"Mozambique","centroid":[35.54,-17.15]}]},{"name":"Angola","centroid":[17.47,-12.23],"areaKm2":1250212,"neighbors":[{"name":"Dem. Rep. Congo","centroid":[23.58,-2.84]},{"name":"Namibia","centroid":[17.14,-22.04]},{"name":"Congo","centroid":[15.14,-0.84]},{"name":"Zambia","centroid":[27.76,-13.39]}]},{"name":"Burundi","centroid":[29.91,-3.38],"areaKm2":26342,"neighbors":[{"name":"Tanzania","centroid":[34.74,-6.25]},{"name":"Dem. Rep. Congo","centroid":[23.58,-2.84]},{"name":"Rwanda","centroid":[29.92,-2.01]}]},{"name":"Israel","centroid":[35,31.48],"areaKm2":23001,"neighbors":[{"name":"Lebanon","centroid":[35.87,33.91]},{"name":"Palestine","centroid":[35.27,31.94]},{"name":"Jordan","centroid":[36.77,31.24]},{"name":"Syria","centroid":[38.52,35.01]},{"name":"Egypt","centroid":[29.86,26.47]}]},{"name":"Lebanon","centroid":[35.87,33.91],"areaKm2":10084,"neighbors":[{"name":"Israel","centroid":[35,31.48]},{"name":"Syria","centroid":[38.52,35.01]}]},{"name":"Madagascar","centroid":[46.73,-19.3],"areaKm2":591059,"neighbors":[]},{"name":"Palestine","centroid":[35.27,31.94],"areaKm2":5039,"neighbors":[{"name":"Israel","centroid":[35,31.48]},{"name":"Jordan","centroid":[36.77,31.24]}]},{"name":"Gambia","centroid":[-15.43,13.48],"areaKm2":14101,"neighbors":[{"name":"Senegal","centroid":[-14.51,14.35]}]},{"name":"Tunisia","centroid":[9.54,34.14],"areaKm2":156296,"neighbors":[{"name":"Algeria","centroid":[2.61,28.09]},{"name":"Libya","centroid":[18.03,26.99]}]},{"name":"Algeria","centroid":[2.61,28.09],"areaKm2":2319394,"neighbors":[{"name":"W. Sahara","centroid":[-12.19,24.28]},{"name":"Mali","centroid":[-3.59,17.24]},{"name":"Mauritania","centroid":[-10.35,20.18]},{"name":"Niger","centroid":[9.27,17.34]},{"name":"Tunisia","centroid":[9.54,34.14]},{"name":"Morocco","centroid":[-8.69,29.82]},{"name":"Libya","centroid":[18.03,26.99]}]},{"name":"Jordan","centroid":[36.77,31.24],"areaKm2":89313,"neighbors":[{"name":"Israel","centroid":[35,31.48]},{"name":"Palestine","centroid":[35.27,31.94]},{"name":"Iraq","centroid":[43.79,33.01]},{"name":"Syria","centroid":[38.52,35.01]},{"name":"Saudi Arabia","centroid":[44.64,24.09]}]},{"name":"United Arab Emirates","centroid":[54.2,23.87],"areaKm2":80036,"neighbors":[{"name":"Oman","centroid":[56.07,20.59]},{"name":"Saudi Arabia","centroid":[44.64,24.09]}]},{"name":"Qatar","centroid":[51.18,25.32],"areaKm2":11368,"neighbors":[{"name":"Saudi Arabia","centroid":[44.64,24.09]}]},{"name":"Kuwait","centroid":[47.6,29.31],"areaKm2":16678,"neighbors":[{"name":"Iraq","centroid":[43.79,33.01]},{"name":"Saudi Arabia","centroid":[44.64,24.09]}]},{"name":"Iraq","centroid":[43.79,33.01],"areaKm2":437210,"neighbors":[{"name":"Jordan","centroid":[36.77,31.24]},{"name":"Kuwait","centroid":[47.6,29.31]},{"name":"Iran","centroid":[54.45,32.47]},{"name":"Syria","centroid":[38.52,35.01]},{"name":"Turkey","centroid":[35.12,39.15]},{"name":"Saudi Arabia","centroid":[44.64,24.09]}]},{"name":"Oman","centroid":[56.07,20.59],"areaKm2":310207,"neighbors":[{"name":"United Arab Emirates","centroid":[54.2,23.87]},{"name":"Yemen","centroid":[47.52,15.92]},{"name":"Saudi Arabia","centroid":[44.64,24.09]}]},{"name":"Vanuatu","centroid":[167.07,-15.54],"areaKm2":7518,"neighbors":[]},{"name":"Cambodia","centroid":[104.87,12.68],"areaKm2":182953,"neighbors":[{"name":"Thailand","centroid":[101,14.98]},{"name":"Laos","centroid":[103.79,18.43]},{"name":"Vietnam","centroid":[106.33,16.56]}]},{"name":"Thailand","centroid":[101,14.98],"areaKm2":511937,"neighbors":[{"name":"Cambodia","centroid":[104.87,12.68]},{"name":"Laos","centroid":[103.79,18.43]},{"name":"Myanmar","centroid":[96.51,20.94]},{"name":"Malaysia","centroid":[109.7,3.75]}]},{"name":"Laos","centroid":[103.79,18.43],"areaKm2":229800,"neighbors":[{"name":"Cambodia","centroid":[104.87,12.68]},{"name":"Thailand","centroid":[101,14.98]},{"name":"Myanmar","centroid":[96.51,20.94]},{"name":"Vietnam","centroid":[106.33,16.56]},{"name":"China","centroid":[103.45,36.68]}]},{"name":"Myanmar","centroid":[96.51,20.94],"areaKm2":681307,"neighbors":[{"name":"Thailand","centroid":[101,14.98]},{"name":"Laos","centroid":[103.79,18.43]},{"name":"India","centroid":[79.54,22.82]},{"name":"Bangladesh","centroid":[90.28,23.83]},{"name":"China","centroid":[103.45,36.68]}]},{"name":"Vietnam","centroid":[106.33,16.56],"areaKm2":337128,"neighbors":[{"name":"Cambodia","centroid":[104.87,12.68]},{"name":"Laos","centroid":[103.79,18.43]},{"name":"China","centroid":[103.45,36.68]}]},{"name":"North Korea","centroid":[127.13,40.13],"areaKm2":125535,"neighbors":[{"name":"Russia","centroid":[95.79,66.07]},{"name":"North Korea","centroid":[127.13,40.13]},{"name":"South Korea","centroid":[127.82,36.42]},{"name":"China","centroid":[103.45,36.68]}]},{"name":"South Korea","centroid":[127.82,36.42],"areaKm2":99047,"neighbors":[{"name":"North Korea","centroid":[127.13,40.13]}]},{"name":"Mongolia","centroid":[103.02,46.95],"areaKm2":1540295,"neighbors":[{"name":"Russia","centroid":[95.79,66.07]},{"name":"China","centroid":[103.45,36.68]}]},{"name":"India","centroid":[79.54,22.82],"areaKm2":3150394,"neighbors":[{"name":"Myanmar","centroid":[96.51,20.94]},{"name":"Bangladesh","centroid":[90.28,23.83]},{"name":"Bhutan","centroid":[90.47,27.43]},{"name":"Nepal","centroid":[84.04,28.25]},{"name":"Pakistan","centroid":[69.23,29.91]},{"name":"China","centroid":[103.45,36.68]}]},{"name":"Bangladesh","centroid":[90.28,23.83],"areaKm2":134088,"neighbors":[{"name":"Myanmar","centroid":[96.51,20.94]},{"name":"India","centroid":[79.54,22.82]}]},{"name":"Bhutan","centroid":[90.47,27.43],"areaKm2":39460,"neighbors":[{"name":"India","centroid":[79.54,22.82]},{"name":"China","centroid":[103.45,36.68]}]},{"name":"Nepal","centroid":[84.04,28.25],"areaKm2":150926,"neighbors":[{"name":"India","centroid":[79.54,22.82]},{"name":"China","centroid":[103.45,36.68]}]},{"name":"Pakistan","centroid":[69.23,29.91],"areaKm2":875142,"neighbors":[{"name":"India","centroid":[79.54,22.82]},{"name":"Afghanistan","centroid":[66,33.84]},{"name":"Iran","centroid":[54.45,32.47]},{"name":"China","centroid":[103.45,36.68]}]},{"name":"Afghanistan","centroid":[66,33.84],"areaKm2":652472,"neighbors":[{"name":"Uzbekistan","centroid":[63.37,41.77]},{"name":"Pakistan","centroid":[69.23,29.91]},{"name":"Tajikistan","centroid":[71.05,38.59]},{"name":"Turkmenistan","centroid":[59.35,39.1]},{"name":"Iran","centroid":[54.45,32.47]},{"name":"China","centroid":[103.45,36.68]}]},{"name":"Tajikistan","centroid":[71.05,38.59],"areaKm2":138018,"neighbors":[{"name":"Uzbekistan","centroid":[63.37,41.77]},{"name":"Afghanistan","centroid":[66,33.84]},{"name":"Kyrgyzstan","centroid":[74.59,41.52]},{"name":"China","centroid":[103.45,36.68]}]},{"name":"Kyrgyzstan","centroid":[74.59,41.52],"areaKm2":195673,"neighbors":[{"name":"Kazakhstan","centroid":[67.24,48.41]},{"name":"Uzbekistan","centroid":[63.37,41.77]},{"name":"Tajikistan","centroid":[71.05,38.59]},{"name":"China","centroid":[103.45,36.68]}]},{"name":"Turkmenistan","centroid":[59.35,39.1],"areaKm2":480371,"neighbors":[{"name":"Kazakhstan","centroid":[67.24,48.41]},{"name":"Uzbekistan","centroid":[63.37,41.77]},{"name":"Afghanistan","centroid":[66,33.84]},{"name":"Iran","centroid":[54.45,32.47]}]},{"name":"Iran","centroid":[54.45,32.47],"areaKm2":1618515,"neighbors":[{"name":"Iraq","centroid":[43.79,33.01]},{"name":"Pakistan","centroid":[69.23,29.91]},{"name":"Afghanistan","centroid":[66,33.84]},{"name":"Turkmenistan","centroid":[59.35,39.1]},{"name":"Armenia","centroid":[45.01,40.21]},{"name":"Turkey","centroid":[35.12,39.15]},{"name":"Azerbaijan","centroid":[47.56,40.22]}]},{"name":"Syria","centroid":[38.52,35.01],"areaKm2":184990,"neighbors":[{"name":"Israel","centroid":[35,31.48]},{"name":"Lebanon","centroid":[35.87,33.91]},{"name":"Jordan","centroid":[36.77,31.24]},{"name":"Iraq","centroid":[43.79,33.01]},{"name":"Turkey","centroid":[35.12,39.15]}]},{"name":"Armenia","centroid":[45.01,40.21],"areaKm2":28625,"neighbors":[{"name":"Iran","centroid":[54.45,32.47]},{"name":"Turkey","centroid":[35.12,39.15]},{"name":"Azerbaijan","centroid":[47.56,40.22]},{"name":"Georgia","centroid":[43.5,42.17]}]},{"name":"Sweden","centroid":[16.11,62.42],"areaKm2":447839,"neighbors":[{"name":"Norway","centroid":[12.83,66.65]},{"name":"Finland","centroid":[26.14,64.26]}]},{"name":"Belarus","centroid":[27.96,53.5],"areaKm2":208116,"neighbors":[{"name":"Russia","centroid":[95.79,66.07]},{"name":"Ukraine","centroid":[31.29,49.19]},{"name":"Poland","centroid":[19.34,52.13]},{"name":"Lithuania","centroid":[23.89,55.28]},{"name":"Latvia","centroid":[24.84,56.82]}]},{"name":"Ukraine","centroid":[31.29,49.19],"areaKm2":570735,"neighbors":[{"name":"Russia","centroid":[95.79,66.07]},{"name":"Belarus","centroid":[27.96,53.5]},{"name":"Poland","centroid":[19.34,52.13]},{"name":"Hungary","centroid":[19.34,47.2]},{"name":"Moldova","centroid":[28.42,47.2]},{"name":"Romania","centroid":[24.95,45.85]},{"name":"Slovakia","centroid":[19.5,48.73]}]},{"name":"Poland","centroid":[19.34,52.13],"areaKm2":309190,"neighbors":[{"name":"Russia","centroid":[95.79,66.07]},{"name":"Belarus","centroid":[27.96,53.5]},{"name":"Ukraine","centroid":[31.29,49.19]},{"name":"Lithuania","centroid":[23.89,55.28]},{"name":"Germany","centroid":[10.27,51.08]},{"name":"Slovakia","centroid":[19.5,48.73]},{"name":"Czechia","centroid":[15.34,49.78]}]},{"name":"Austria","centroid":[14.06,47.62],"areaKm2":84845,"neighbors":[{"name":"Hungary","centroid":[19.34,47.2]},{"name":"Germany","centroid":[10.27,51.08]},{"name":"Switzerland","centroid":[8.12,46.79]},{"name":"Italy","centroid":[12.27,42.67]},{"name":"Slovenia","centroid":[14.93,46.13]},{"name":"Slovakia","centroid":[19.5,48.73]},{"name":"Czechia","centroid":[15.34,49.78]}]},{"name":"Hungary","centroid":[19.34,47.2],"areaKm2":92233,"neighbors":[{"name":"Ukraine","centroid":[31.29,49.19]},{"name":"Austria","centroid":[14.06,47.62]},{"name":"Romania","centroid":[24.95,45.85]},{"name":"Croatia","centroid":[16.57,45.01]},{"name":"Slovenia","centroid":[14.93,46.13]},{"name":"Slovakia","centroid":[19.5,48.73]},{"name":"Serbia","centroid":[20.84,44.22]}]},{"name":"Moldova","centroid":[28.42,47.2],"areaKm2":32229,"neighbors":[{"name":"Ukraine","centroid":[31.29,49.19]},{"name":"Romania","centroid":[24.95,45.85]}]},{"name":"Romania","centroid":[24.95,45.85],"areaKm2":237768,"neighbors":[{"name":"Ukraine","centroid":[31.29,49.19]},{"name":"Hungary","centroid":[19.34,47.2]},{"name":"Moldova","centroid":[28.42,47.2]},{"name":"Bulgaria","centroid":[25.19,42.76]},{"name":"Serbia","centroid":[20.84,44.22]}]},{"name":"Lithuania","centroid":[23.89,55.28],"areaKm2":63547,"neighbors":[{"name":"Russia","centroid":[95.79,66.07]},{"name":"Belarus","centroid":[27.96,53.5]},{"name":"Poland","centroid":[19.34,52.13]},{"name":"Latvia","centroid":[24.84,56.82]}]},{"name":"Latvia","centroid":[24.84,56.82],"areaKm2":63611,"neighbors":[{"name":"Russia","centroid":[95.79,66.07]},{"name":"Belarus","centroid":[27.96,53.5]},{"name":"Lithuania","centroid":[23.89,55.28]},{"name":"Estonia","centroid":[25.83,58.64]}]},{"name":"Estonia","centroid":[25.83,58.64],"areaKm2":44449,"neighbors":[{"name":"Russia","centroid":[95.79,66.07]},{"name":"Latvia","centroid":[24.84,56.82]}]},{"name":"Germany","centroid":[10.27,51.08],"areaKm2":356100,"neighbors":[{"name":"France","centroid":[-6.8,43.14]},{"name":"Poland","centroid":[19.34,52.13]},{"name":"Austria","centroid":[14.06,47.62]},{"name":"Switzerland","centroid":[8.12,46.79]},{"name":"Luxembourg","centroid":[5.97,49.76]},{"name":"Belgium","centroid":[4.59,50.65]},{"name":"Netherlands","centroid":[5.5,52.29]},{"name":"Denmark","centroid":[9.89,56.06]},{"name":"Czechia","centroid":[15.34,49.78]}]},{"name":"Bulgaria","centroid":[25.19,42.76],"areaKm2":110040,"neighbors":[{"name":"Romania","centroid":[24.95,45.85]},{"name":"Greece","centroid":[22.72,39.04]},{"name":"Turkey","centroid":[35.12,39.15]},{"name":"Macedonia","centroid":[21.7,41.61]},{"name":"Serbia","centroid":[20.84,44.22]}]},{"name":"Greece","centroid":[22.72,39.04],"areaKm2":131885,"neighbors":[{"name":"Bulgaria","centroid":[25.19,42.76]},{"name":"Turkey","centroid":[35.12,39.15]},{"name":"Albania","centroid":[20.03,41.13]},{"name":"Macedonia","centroid":[21.7,41.61]}]},{"name":"Turkey","centroid":[35.12,39.15],"areaKm2":798151,"neighbors":[{"name":"Iraq","centroid":[43.79,33.01]},{"name":"Iran","centroid":[54.45,32.47]},{"name":"Syria","centroid":[38.52,35.01]},{"name":"Armenia","centroid":[45.01,40.21]},{"name":"Bulgaria","centroid":[25.19,42.76]},{"name":"Greece","centroid":[22.72,39.04]},{"name":"Georgia","centroid":[43.5,42.17]}]},{"name":"Albania","centroid":[20.03,41.13],"areaKm2":29662,"neighbors":[{"name":"Greece","centroid":[22.72,39.04]},{"name":"Macedonia","centroid":[21.7,41.61]},{"name":"Montenegro","centroid":[19.29,42.79]},{"name":"Kosovo","centroid":[20.9,42.58]}]},{"name":"Croatia","centroid":[16.57,45.01],"areaKm2":57359,"neighbors":[{"name":"Hungary","centroid":[19.34,47.2]},{"name":"Slovenia","centroid":[14.93,46.13]},{"name":"Bosnia and Herz.","centroid":[17.82,44.18]},{"name":"Serbia","centroid":[20.84,44.22]},{"name":"Montenegro","centroid":[19.29,42.79]}]},{"name":"Switzerland","centroid":[8.12,46.79],"areaKm2":46048,"neighbors":[{"name":"France","centroid":[-6.8,43.14]},{"name":"Austria","centroid":[14.06,47.62]},{"name":"Germany","centroid":[10.27,51.08]},{"name":"Italy","centroid":[12.27,42.67]}]},{"name":"Luxembourg","centroid":[5.97,49.76],"areaKm2":2407,"neighbors":[{"name":"France","centroid":[-6.8,43.14]},{"name":"Germany","centroid":[10.27,51.08]},{"name":"Belgium","centroid":[4.59,50.65]}]},{"name":"Belgium","centroid":[4.59,50.65],"areaKm2":30017,"neighbors":[{"name":"France","centroid":[-6.8,43.14]},{"name":"Germany","centroid":[10.27,51.08]},{"name":"Luxembourg","centroid":[5.97,49.76]},{"name":"Netherlands","centroid":[5.5,52.29]}]},{"name":"Netherlands","centroid":[5.5,52.29],"areaKm2":39864,"neighbors":[{"name":"Germany","centroid":[10.27,51.08]},{"name":"Belgium","centroid":[4.59,50.65]}]},{"name":"Portugal","centroid":[-8.06,39.61],"areaKm2":93318,"neighbors":[{"name":"Spain","centroid":[-3.62,40.32]}]},{"name":"Spain","centroid":[-3.62,40.32],"areaKm2":501718,"neighbors":[{"name":"France","centroid":[-6.8,43.14]},{"name":"Portugal","centroid":[-8.06,39.61]}]},{"name":"Ireland","centroid":[-8.02,53.17],"areaKm2":58255,"neighbors":[{"name":"United Kingdom","centroid":[-2.76,53.81]}]},{"name":"New Caledonia","centroid":[165.53,-21.26],"areaKm2":23285,"neighbors":[]},{"name":"Solomon Is.","centroid":[159.96,-8.85],"areaKm2":24835,"neighbors":[]},{"name":"New Zealand","centroid":[172.95,-41.55],"areaKm2":277224,"neighbors":[]},{"name":"Australia","centroid":[134.31,-25.76],"areaKm2":7702281,"neighbors":[]},{"name":"Sri Lanka","centroid":[80.67,7.7],"areaKm2":65646,"neighbors":[]},{"name":"China","centroid":[103.45,36.68],"areaKm2":9407891,"neighbors":[{"name":"Kazakhstan","centroid":[67.24,48.41]},{"name":"Russia","centroid":[95.79,66.07]},{"name":"Laos","centroid":[103.79,18.43]},{"name":"Myanmar","centroid":[96.51,20.94]},{"name":"Vietnam","centroid":[106.33,16.56]},{"name":"North Korea","centroid":[127.13,40.13]},{"name":"Mongolia","centroid":[103.02,46.95]},{"name":"India","centroid":[79.54,22.82]},{"name":"Bhutan","centroid":[90.47,27.43]},{"name":"Nepal","centroid":[84.04,28.25]},{"name":"Pakistan","centroid":[69.23,29.91]},{"name":"Afghanistan","centroid":[66,33.84]},{"name":"Tajikistan","centroid":[71.05,38.59]},{"name":"Kyrgyzstan","centroid":[74.59,41.52]}]},{"name":"Taiwan","centroid":[120.97,23.74],"areaKm2":34434,"neighbors":[]},{"name":"Italy","centroid":[12.27,42.67],"areaKm2":314539,"neighbors":[{"name":"France","centroid":[-6.8,43.14]},{"name":"Austria","centroid":[14.06,47.62]},{"name":"Switzerland","centroid":[8.12,46.79]},{"name":"Slovenia","centroid":[14.93,46.13]}]},{"name":"Denmark","centroid":[9.89,56.06],"areaKm2":42546,"neighbors":[{"name":"Germany","centroid":[10.27,51.08]}]},{"name":"United Kingdom","centroid":[-2.76,53.81],"areaKm2":248938,"neighbors":[{"name":"Ireland","centroid":[-8.02,53.17]}]},{"name":"Iceland","centroid":[-18.77,65.08],"areaKm2":107023,"neighbors":[]},{"name":"Azerbaijan","centroid":[47.56,40.22],"areaKm2":91009,"neighbors":[{"name":"Russia","centroid":[95.79,66.07]},{"name":"Iran","centroid":[54.45,32.47]},{"name":"Armenia","centroid":[45.01,40.21]},{"name":"Georgia","centroid":[43.5,42.17]}]},{"name":"Georgia","centroid":[43.5,42.17],"areaKm2":68945,"neighbors":[{"name":"Russia","centroid":[95.79,66.07]},{"name":"Armenia","centroid":[45.01,40.21]},{"name":"Turkey","centroid":[35.12,39.15]},{"name":"Azerbaijan","centroid":[47.56,40.22]}]},{"name":"Philippines","centroid":[122.94,11.72],"areaKm2":293250,"neighbors":[]},{"name":"Malaysia","centroid":[109.7,3.75],"areaKm2":339749,"neighbors":[{"name":"Indonesia","centroid":[117.36,-2.27]},{"name":"Thailand","centroid":[101,14.98]},{"name":"Brunei","centroid":[114.92,4.69]}]},{"name":"Brunei","centroid":[114.92,4.69],"areaKm2":10718,"neighbors":[{"name":"Malaysia","centroid":[109.7,3.75]}]},{"name":"Slovenia","centroid":[14.93,46.13],"areaKm2":19094,"neighbors":[{"name":"Austria","centroid":[14.06,47.62]},{"name":"Hungary","centroid":[19.34,47.2]},{"name":"Croatia","centroid":[16.57,45.01]},{"name":"Italy","centroid":[12.27,42.67]}]},{"name":"Finland","centroid":[26.14,64.26],"areaKm2":339050,"neighbors":[{"name":"Russia","centroid":[95.79,66.07]},{"name":"Norway","centroid":[12.83,66.65]},{"name":"Sweden","centroid":[16.11,62.42]}]},{"name":"Slovakia","centroid":[19.5,48.73],"areaKm2":46923,"neighbors":[{"name":"Ukraine","centroid":[31.29,49.19]},{"name":"Poland","centroid":[19.34,52.13]},{"name":"Austria","centroid":[14.06,47.62]},{"name":"Hungary","centroid":[19.34,47.2]},{"name":"Czechia","centroid":[15.34,49.78]}]},{"name":"Czechia","centroid":[15.34,49.78],"areaKm2":80963,"neighbors":[{"name":"Poland","centroid":[19.34,52.13]},{"name":"Austria","centroid":[14.06,47.62]},{"name":"Germany","centroid":[10.27,51.08]},{"name":"Slovakia","centroid":[19.5,48.73]}]},{"name":"Eritrea","centroid":[38.69,15.43],"areaKm2":119706,"neighbors":[{"name":"Sudan","centroid":[29.83,15.97]},{"name":"Ethiopia","centroid":[39.56,8.65]},{"name":"Djibouti","centroid":[42.5,11.77]}]},{"name":"Japan","centroid":[137.71,37.54],"areaKm2":404392,"neighbors":[]},{"name":"Paraguay","centroid":[-58.43,-23.23],"areaKm2":402307,"neighbors":[{"name":"Argentina","centroid":[-64.75,-34.74]},{"name":"Brazil","centroid":[-53.17,-10.66]},{"name":"Bolivia","centroid":[-64.65,-16.7]}]},{"name":"Yemen","centroid":[47.52,15.92],"areaKm2":457453,"neighbors":[{"name":"Oman","centroid":[56.07,20.59]},{"name":"Saudi Arabia","centroid":[44.64,24.09]}]},{"name":"Saudi Arabia","centroid":[44.64,24.09],"areaKm2":1924610,"neighbors":[{"name":"Jordan","centroid":[36.77,31.24]},{"name":"United Arab Emirates","centroid":[54.2,23.87]},{"name":"Qatar","centroid":[51.18,25.32]},{"name":"Kuwait","centroid":[47.6,29.31]},{"name":"Iraq","centroid":[43.79,33.01]},{"name":"Oman","centroid":[56.07,20.59]},{"name":"Yemen","centroid":[47.52,15.92]}]},{"name":"N. Cyprus","centroid":[33.56,35.27],"areaKm2":3786,"neighbors":[{"name":"Cyprus","centroid":[33.04,34.91]}]},{"name":"Cyprus","centroid":[33.04,34.91],"areaKm2":6217,"neighbors":[{"name":"N. Cyprus","centroid":[33.56,35.27]}]},{"name":"Morocco","centroid":[-8.69,29.82],"areaKm2":592380,"neighbors":[{"name":"W. Sahara","centroid":[-12.19,24.28]},{"name":"Algeria","centroid":[2.61,28.09]}]},{"name":"Egypt","centroid":[29.86,26.47],"areaKm2":998014,"neighbors":[{"name":"Sudan","centroid":[29.83,15.97]},{"name":"Israel","centroid":[35,31.48]},{"name":"Libya","centroid":[18.03,26.99]}]},{"name":"Libya","centroid":[18.03,26.99],"areaKm2":1636658,"neighbors":[{"name":"Sudan","centroid":[29.83,15.97]},{"name":"Chad","centroid":[18.57,15.28]},{"name":"Niger","centroid":[9.27,17.34]},{"name":"Tunisia","centroid":[9.54,34.14]},{"name":"Algeria","centroid":[2.61,28.09]},{"name":"Egypt","centroid":[29.86,26.47]}]},{"name":"Ethiopia","centroid":[39.56,8.65],"areaKm2":1137030,"neighbors":[{"name":"Somalia","centroid":[45.7,4.74]},{"name":"Kenya","centroid":[37.79,0.6]},{"name":"Sudan","centroid":[29.83,15.97]},{"name":"Eritrea","centroid":[38.69,15.43]},{"name":"Djibouti","centroid":[42.5,11.77]},{"name":"Somaliland","centroid":[46.23,9.76]},{"name":"S. Sudan","centroid":[30.2,7.29]}]},{"name":"Djibouti","centroid":[42.5,11.77],"areaKm2":21961,"neighbors":[{"name":"Eritrea","centroid":[38.69,15.43]},{"name":"Ethiopia","centroid":[39.56,8.65]},{"name":"Somaliland","centroid":[46.23,9.76]}]},{"name":"Somaliland","centroid":[46.23,9.76],"areaKm2":168006,"neighbors":[{"name":"Somalia","centroid":[45.7,4.74]},{"name":"Ethiopia","centroid":[39.56,8.65]},{"name":"Djibouti","centroid":[42.5,11.77]}]},{"name":"Uganda","centroid":[32.36,1.3],"areaKm2":246859,"neighbors":[{"name":"Tanzania","centroid":[34.74,-6.25]},{"name":"Dem. Rep. Congo","centroid":[23.58,-2.84]},{"name":"Kenya","centroid":[37.79,0.6]},{"name":"Rwanda","centroid":[29.92,-2.01]},{"name":"S. Sudan","centroid":[30.2,7.29]}]},{"name":"Rwanda","centroid":[29.92,-2.01],"areaKm2":23442,"neighbors":[{"name":"Tanzania","centroid":[34.74,-6.25]},{"name":"Dem. Rep. Congo","centroid":[23.58,-2.84]},{"name":"Burundi","centroid":[29.91,-3.38]},{"name":"Uganda","centroid":[32.36,1.3]}]},{"name":"Bosnia and Herz.","centroid":[17.82,44.18],"areaKm2":50536,"neighbors":[{"name":"Croatia","centroid":[16.57,45.01]},{"name":"Serbia","centroid":[20.84,44.22]},{"name":"Montenegro","centroid":[19.29,42.79]}]},{"name":"Macedonia","centroid":[21.7,41.61],"areaKm2":25017,"neighbors":[{"name":"Bulgaria","centroid":[25.19,42.76]},{"name":"Greece","centroid":[22.72,39.04]},{"name":"Albania","centroid":[20.03,41.13]},{"name":"Serbia","centroid":[20.84,44.22]},{"name":"Kosovo","centroid":[20.9,42.58]}]},{"name":"Serbia","centroid":[20.84,44.22],"areaKm2":76233,"neighbors":[{"name":"Hungary","centroid":[19.34,47.2]},{"name":"Romania","centroid":[24.95,45.85]},{"name":"Bulgaria","centroid":[25.19,42.76]},{"name":"Croatia","centroid":[16.57,45.01]},{"name":"Bosnia and Herz.","centroid":[17.82,44.18]},{"name":"Macedonia","centroid":[21.7,41.61]},{"name":"Montenegro","centroid":[19.29,42.79]},{"name":"Kosovo","centroid":[20.9,42.58]}]},{"name":"Montenegro","centroid":[19.29,42.79],"areaKm2":13424,"neighbors":[{"name":"Albania","centroid":[20.03,41.13]},{"name":"Croatia","centroid":[16.57,45.01]},{"name":"Bosnia and Herz.","centroid":[17.82,44.18]},{"name":"Serbia","centroid":[20.84,44.22]},{"name":"Kosovo","centroid":[20.9,42.58]}]},{"name":"Kosovo","centroid":[20.9,42.58],"areaKm2":11220,"neighbors":[{"name":"Albania","centroid":[20.03,41.13]},{"name":"Macedonia","centroid":[21.7,41.61]},{"name":"Serbia","centroid":[20.84,44.22]},{"name":"Montenegro","centroid":[19.29,42.79]}]},{"name":"Trinidad and Tobago","centroid":[-61.33,10.43],"areaKm2":7764,"neighbors":[]},{"name":"S. Sudan","centroid":[30.2,7.29],"areaKm2":627530,"neighbors":[{"name":"Dem. Rep. Congo","centroid":[23.58,-2.84]},{"name":"Kenya","centroid":[37.79,0.6]},{"name":"Sudan","centroid":[29.83,15.97]},{"name":"Central African Rep.","centroid":[20.37,6.55]},{"name":"Ethiopia","centroid":[39.56,8.65]},{"name":"Uganda","centroid":[32.36,1.3]}]}],"targets":["Tanzania","W. Sahara","Kazakhstan","Uzbekistan","Indonesia","Argentina","Chile","Somalia","Kenya","Sudan","Chad","Norway","South Africa","Mexico","Bolivia","Peru","Colombia","Honduras","Guatemala","Venezuela","Guyana","Suriname","France","Zimbabwe","Botswana","Namibia","Senegal","Mali","Mauritania","Benin","Niger","Nigeria","Cameroon","Togo","Ghana","Côte d'Ivoire","Guinea","Liberia","Burkina Faso","Central African Rep.","Congo","Gabon","Zambia","Malawi","Mozambique","Angola","Burundi","Israel","Algeria","Jordan","Iraq","Oman","Cambodia","Thailand","Laos","Myanmar","Vietnam","North Korea","India","Pakistan","Afghanistan","Tajikistan","Kyrgyzstan","Turkmenistan","Iran","Syria","Armenia","Belarus","Ukraine","Poland","Austria","Hungary","Romania","Lithuania","Latvia","Bulgaria","Greece","Turkey","Albania","Croatia","Switzerland","Luxembourg","Belgium","Italy","Azerbaijan","Georgia","Malaysia","Slovenia","Finland","Slovakia","Czechia","Eritrea","Paraguay","Saudi Arabia","Egypt","Libya","Ethiopia","Djibouti","Somaliland","Uganda","Rwanda","Bosnia and Herz.","Macedonia","Serbia","Montenegro","Kosovo","S. Sudan"]};
+const byName = {};
+DATA.countries.forEach(c => byName[c.name] = c);
+
+let target, guesses, done, ring2shown;
+
+function haversine(c1, c2){
+  const R = 6371;
+  const [lon1,lat1] = c1, [lon2,lat2] = c2;
+  const toRad = d => d*Math.PI/180;
+  const dLat = toRad(lat2-lat1), dLon = toRad(lon2-lon1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+  return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+}
+function bearing(c1, c2){
+  const [lon1,lat1] = c1, [lon2,lat2] = c2;
+  const toRad = d => d*Math.PI/180, toDeg = r => r*180/Math.PI;
+  const y = Math.sin(toRad(lon2-lon1)) * Math.cos(toRad(lat2));
+  const x = Math.cos(toRad(lat1))*Math.sin(toRad(lat2)) - Math.sin(toRad(lat1))*Math.cos(toRad(lat2))*Math.cos(toRad(lon2-lon1));
+  return (toDeg(Math.atan2(y,x)) + 360) % 360;
+}
+function bearingArrow(deg){
+  const arrows = ['↑','↗','→','↘','↓','↙','←','↖'];
+  return arrows[Math.round(deg/45) % 8];
+}
+function badgeClass(dist){
+  if (dist < 600) return 'hot';
+  if (dist < 2500) return 'warm';
+  return 'cold';
+}
+function localXY(centroid, origin){
+  const [lon, lat] = centroid, [lon0, lat0] = origin;
+  const x = (lon - lon0) * Math.cos(lat0 * Math.PI/180);
+  const y = (lat0 - lat);
+  return [x, y];
+}
+function letterHint(name){
+  let seen = false;
+  return name.split('').map(ch => {
+    if (/[a-zA-Z]/.test(ch)){
+      if (!seen){ seen = true; return ch; }
+      return '_';
+    }
+    return ch;
+  }).join('');
+}
+const SIZE_REFS = [
+  {name:'Russia', km2:17098246},{name:'Canada', km2:9984670},{name:'China', km2:9596960},
+  {name:'the United States', km2:9147420},{name:'Brazil', km2:8515767},{name:'India', km2:3287263},
+  {name:'Kazakhstan', km2:2724900},{name:'Algeria', km2:2381741},{name:'Mexico', km2:1964375},
+  {name:'Egypt', km2:1002450},{name:'France', km2:551695},{name:'Thailand', km2:513120},
+  {name:'Spain', km2:505990},{name:'Germany', km2:357022},{name:'Japan', km2:377975},
+  {name:'the United Kingdom', km2:243610},{name:'Nepal', km2:147181},{name:'Portugal', km2:92212},
+  {name:'Switzerland', km2:41285},{name:'the Netherlands', km2:41543},{name:'Belgium', km2:30528},
+  {name:'Jamaica', km2:10991}
+];
+function sizeHint(km2, excludeName){
+  let best = null, bestScore = Infinity;
+  for (const r of SIZE_REFS){
+    if (r.name === excludeName) continue;
+    const score = Math.abs(Math.log(km2) - Math.log(r.km2));
+    if (score < bestScore){ bestScore = score; best = r; }
+  }
+  return "Roughly the size of " + best.name + " (~" + km2.toLocaleString() + " km²)";
+}
+
+function layout(){
+  const stage = document.getElementById('stage');
+  stage.querySelectorAll('.dot,.lbl').forEach(el => el.remove());
+  const w = stage.clientWidth, h = stage.clientHeight;
+  const cx = w/2, cy = h/2;
+
+  const ring1 = target.neighbors.map(n => ({...n, ring:1}));
+  let ring2 = [];
+  if (ring2shown){
+    const shownNames = new Set([target.name, ...ring1.map(n=>n.name)]);
+    target.neighbors.forEach(n => {
+      const rec = byName[n.name];
+      if (!rec) return;
+      rec.neighbors.forEach(n2 => {
+        if (!shownNames.has(n2.name)){
+          shownNames.add(n2.name);
+          ring2.push({...n2, ring:2});
+        }
+      });
+    });
+  }
+
+  const all = [...ring1, ...ring2];
+  const pts = all.map(n => localXY(n.centroid, target.centroid));
+  const maxAbs = Math.max(0.5, ...pts.map(p => Math.max(Math.abs(p[0]), Math.abs(p[1]))));
+  const scale = (Math.min(w,h) * 0.40) / maxAbs;
+
+  all.forEach((n, idx) => {
+    const [x, y] = pts[idx];
+    const px = cx + x * scale, py = cy + y * scale;
+    const dot = document.createElement('div');
+    dot.className = 'dot' + (n.ring===2 ? ' ring2' : '');
+    const size = n.ring===2 ? 7 : 11;
+    dot.style.width = size+'px'; dot.style.height = size+'px';
+    dot.style.left = px+'px'; dot.style.top = py+'px';
+    stage.appendChild(dot);
+
+    const lbl = document.createElement('div');
+    lbl.className = 'lbl' + (n.ring===2 ? ' ring2' : '');
+    lbl.style.left = px+'px'; lbl.style.top = py+'px';
+    lbl.textContent = n.name;
+    stage.appendChild(lbl);
+  });
+}
+
+const MAX_GUESSES = 6;
+const EPOCH = new Date('2025-01-01T00:00:00Z');
+
+function dailyPuzzleNumber(){
+  const now = new Date();
+  const utcToday = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  const diffDays = Math.floor((utcToday - Date.UTC(2025,0,1)) / 86400000);
+  return Math.max(1, diffDays + 1);
+}
+function dailyTargetName(){
+  const n = dailyPuzzleNumber();
+  // simple deterministic hash so the sequence isn't just index order
+  let h = 0;
+  const s = 'negle-' + n;
+  for (let i=0;i<s.length;i++){ h = (h*31 + s.charCodeAt(i)) >>> 0; }
+  return DATA.targets[h % DATA.targets.length];
+}
+
+let isDaily = true;
+
+function newGame(daily){
+  isDaily = daily;
+  const name = daily ? dailyTargetName() : DATA.targets[Math.floor(Math.random()*DATA.targets.length)];
+  target = byName[name];
+  guesses = [];
+  done = false;
+  ring2shown = false;
+  document.getElementById('history').innerHTML = '';
+  document.getElementById('winBanner').style.display = 'none';
+  document.getElementById('hintLetters').className = 'hint-box';
+  document.getElementById('hintSize').className = 'hint-box';
+  document.getElementById('guessInput').disabled = false;
+  document.getElementById('guessBtn').disabled = false;
+  document.getElementById('guessInput').value = '';
+  document.getElementById('newGameBtn').style.display = 'none';
+  document.getElementById('giveUpBtn').style.display = 'inline-block';
+  document.getElementById('ringinfo').textContent = '1st-ring neighbors shown';
+  document.getElementById('shareBtn').textContent = '📋 Copy result';
+  document.getElementById('shareBtn').classList.remove('copied');
+  document.getElementById('dailyModeBtn').classList.toggle('active', daily);
+  document.getElementById('practiceModeBtn').classList.toggle('active', !daily);
+  document.getElementById('puzzleNum').textContent = dailyPuzzleNumber();
+  updateMeta();
+  layout();
+}
+function updateMeta(){
+  document.getElementById('guessnum').textContent = 'guess ' + (guesses.length+1) + ' / ' + MAX_GUESSES;
+  document.getElementById('guessCount').textContent = guesses.length;
+}
+function findCountry(input){
+  const norm = s => s.toLowerCase().replace(/^the\s+/,'').replace(/[^a-z]/g,'');
+  const n = norm(input);
+  return DATA.countries.find(c => norm(c.name) === n) ||
+         DATA.countries.find(c => norm(c.name).includes(n) && n.length > 3);
+}
+function renderHistory(){
+  const el = document.getElementById('history');
+  el.innerHTML = guesses.slice().reverse().map(g => {
+    if (g.correct){
+      return '<div class="guess-item"><span class="name">'+g.name+'</span><span class="badge hot">exact match</span><span class="arrow">🎯</span></div>';
+    }
+    return '<div class="guess-item">'+
+      '<span class="name">'+g.name+'</span>'+
+      '<span class="badge '+badgeClass(g.dist)+'">'+g.dist.toLocaleString()+' km</span>'+
+      '<span class="arrow">'+bearingArrow(g.brg)+'</span></div>';
+  }).join('');
+}
+function submitGuess(){
+  if (done) return;
+  const val = document.getElementById('guessInput').value.trim();
+  if (!val) return;
+  const match = findCountry(val);
+  if (!match){ alert("Don't recognize that one — try the full country name."); return; }
+  if (guesses.find(g => g.name === match.name)){ document.getElementById('guessInput').value=''; return; }
+
+  const dist = haversine(match.centroid, target.centroid);
+  const brg = bearing(match.centroid, target.centroid);
+  const correct = match.name === target.name;
+  guesses.push({name: match.name, dist, brg, correct});
+  renderHistory();
+  document.getElementById('guessInput').value = '';
+  updateMeta();
+
+  if (correct){ endGame(true); return; }
+
+  const n = guesses.length;
+  if (n === 1){
+    ring2shown = true;
+    document.getElementById('ringinfo').textContent = '2nd-ring neighbors added';
+    layout();
+  } else if (n === 2){
+    const box = document.getElementById('hintLetters');
+    box.textContent = 'Hint: ' + letterHint(target.name);
+    box.className = 'hint-box show';
+  } else if (n === 3){
+    const box = document.getElementById('hintSize');
+    box.textContent = 'Hint: ' + sizeHint(target.areaKm2, target.name);
+    box.className = 'hint-box show';
+  }
+
+  if (n >= MAX_GUESSES){ endGame(false); }
+}
+function squareFor(g){
+  if (g.correct) return '🟩';
+  if (g.dist < 600) return '🟧';
+  if (g.dist < 2500) return '🟨';
+  return '⬜';
+}
+function buildShareText(won){
+  const label = isDaily ? ('Negle #' + dailyPuzzleNumber()) : 'Negle (practice)';
+  const score = won ? (guesses.length + '/' + MAX_GUESSES) : ('X/' + MAX_GUESSES);
+  const squares = guesses.map(squareFor).join('');
+  return label + '\n' + score + '\n' + squares + '\n' + window.location.href;
+}
+function copyResult(){
+  const text = buildShareText(guesses.length > 0 && guesses[guesses.length-1].correct);
+  const btn = document.getElementById('shareBtn');
+  const done = () => { btn.textContent = '✅ Copied!'; btn.classList.add('copied'); setTimeout(()=>{btn.textContent='📋 Copy result'; btn.classList.remove('copied');}, 1800); };
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
+  } else {
+    fallbackCopy(text, done);
+  }
+}
+function fallbackCopy(text, cb){
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); cb(); } catch(e){ alert(text); }
+  document.body.removeChild(ta);
+}
+function endGame(won){
+  done = true;
+  document.getElementById('guessInput').disabled = true;
+  document.getElementById('guessBtn').disabled = true;
+  document.getElementById('giveUpBtn').style.display = 'none';
+  document.getElementById('newGameBtn').style.display = 'inline-block';
+  const banner = document.getElementById('winBanner');
+  banner.style.display = 'block';
+  document.getElementById('winTitle').textContent = won ? '🎯 ' + target.name + '!' : 'It was ' + target.name;
+  document.getElementById('winSub').textContent = won ? ('Solved in ' + guesses.length + ' guess' + (guesses.length===1?'':'es')) : 'Better luck next time';
+}
+
+document.getElementById('guessBtn').addEventListener('click', submitGuess);
+document.getElementById('guessInput').addEventListener('keydown', e => { if(e.key==='Enter') submitGuess(); });
+document.getElementById('shareBtn').addEventListener('click', copyResult);
+document.getElementById('dailyModeBtn').addEventListener('click', () => newGame(true));
+document.getElementById('practiceModeBtn').addEventListener('click', () => newGame(false));
+document.getElementById('giveUpBtn').addEventListener('click', () => endGame(false));
+document.getElementById('newGameBtn').addEventListener('click', () => newGame(isDaily));
+window.addEventListener('resize', () => { layout(); });
+
+document.getElementById('countryList').innerHTML = DATA.countries.map(c => '<option value="'+c.name+'">').join('');
+
+newGame(true);
+</script>
+</body>
+</html>

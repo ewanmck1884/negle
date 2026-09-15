@@ -1,0 +1,13 @@
+{
+  "name": "negle-data",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "node build-data.js"
+  },
+  "dependencies": {
+    "world-atlas": "^3.0.0",
+    "topojson-client": "^3.1.0",
+    "d3-geo": "^3.1.0"
+  }
+}
