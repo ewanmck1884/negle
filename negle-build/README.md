@@ -29,7 +29,9 @@ no shape is ever shown.
 
 This folder is a working prototype, not a finished product. Everything
 runs client-side from one static HTML file — no backend, no build step
-needed to *play* it.
+needed to *play* it. The playable file lives at the **repo root**
+(`/index.html`) so it can be served directly by GitHub Pages; this folder
+holds the data pipeline and the template used to regenerate it.
 
 ```
 negle-build/
@@ -40,9 +42,11 @@ negle-build/
 │   └── package.json       # deps for build-data.js (world-atlas, d3-geo,
 │                             topojson-client)
 └── web/
-    ├── index.html          # the playable game, data already embedded
-    └── index.template.html # same file with `__DATA__` as a placeholder,
+    └── index.template.html # the game with `__DATA__` as a placeholder,
                                so you can regenerate data and re-inject it
+
+/index.html                 # the playable game (repo root, GitHub Pages
+                               source), data already embedded
 ```
 
 To rebuild the data (e.g. after tuning the country pool or adjacency
@@ -51,8 +55,11 @@ rules):
 ```
 cd data && npm install && npm run build
 # then inject data/negle-data.json in place of __DATA__ in
-# web/index.template.html to produce a new web/index.html
+# web/index.template.html to produce a new root /index.html
 ```
+
+Live at GitHub Pages once merged to `main`: see the repo's Actions tab /
+Pages settings for the URL.
 
 ## Design notes worth knowing before you touch the code
 
@@ -72,18 +79,21 @@ cd data && npm install && npm run build
   cryptographically distributed — fine for this use case, but note that
   changing the `targets` array (e.g. regenerating data with a different
   pool) will shift which country lands on which day.
-- **No persistence**: nothing is saved between sessions. Refreshing
-  resets Daily progress; there's no streak tracking, no "you already
-  played today" gate, no history.
+- **Partial persistence**: streak and stats are now saved in
+  `localStorage` (see roadmap item 2, done below), keyed off the daily
+  puzzle number so a result is only recorded once per day. In-progress
+  guesses are still not saved — refreshing mid-game resets the current
+  Daily attempt (item 1 below is still open).
 
 ## Suggested next steps, roughly in priority order
 
 1. **Persist daily progress** (localStorage): remember today's guesses so
    refreshing doesn't lose progress, and lock the board once solved/failed
    for the day like real Wordle does.
-2. **Streak + stats** (localStorage): games played, win %, guess
-   distribution, current/max streak — shown in a stats modal after each
-   daily game, alongside the share button.
+2. **Streak + stats** (localStorage) — done: games played, win %, guess
+   distribution, current/max streak, stored in `localStorage` under
+   `negle-stats`. A stats modal (📊 button next to the title) shows them,
+   and opens automatically after each completed Daily game.
 3. **Mobile polish**: the dot/label layout can get crowded on narrow
    screens for higher-degree countries; worth testing on an actual phone
    and adjusting label truncation / font scaling.
@@ -92,12 +102,14 @@ cd data && npm install && npm run build
    data. Consider hand-curating (exclude confusing micro-adjacencies,
    include popular islands via a fallback mechanic) rather than relying
    purely on the automated filter.
-5. **Deploy**: static site, no backend — works as-is on GitHub Pages,
-   Cloudflare Pages, or Vercel. Daily seed uses the client's local date
-   right now; if you want the puzzle to change at a fixed UTC time for
-   everyone rather than per-timezone, that's already how it's written
-   (`dailyPuzzleNumber()` uses UTC), just worth confirming that's the
-   behavior you want.
+5. **Deploy** — done: `/index.html` sits at the repo root and
+   `.github/workflows/pages.yml` deploys it to GitHub Pages on every push
+   to `main` (via `actions/configure-pages` + `actions/deploy-pages`, so
+   Pages gets enabled automatically the first time the workflow runs).
+   Daily seed uses the client's local date right now; if you want the
+   puzzle to change at a fixed UTC time for everyone rather than
+   per-timezone, that's already how it's written (`dailyPuzzleNumber()`
+   uses UTC), just worth confirming that's the behavior you want.
 6. **Analytics** (optional): if this goes anywhere semi-public, knowing
    average guesses-to-solve per country would help tune the neighbor-pool
    and hint-timing difficulty.
