@@ -91,11 +91,42 @@
   #shareBtn{background:var(--panel2); color:var(--text); border:1px solid var(--accent); }
   #shareBtn.copied{background:var(--accent); color:#08211a; border-color:var(--accent);}
   .guess-dots{text-align:center; font-size:20px; letter-spacing:4px; margin:10px 0 0;}
+  .stats-btn{
+    position:absolute; top:0; right:0; background:none; border:none; color:var(--muted);
+    font-size:20px; padding:4px 8px; cursor:pointer;
+  }
+  .title-row{position:relative;}
+  .modal-overlay{
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55);
+    align-items:center; justify-content:center; padding:16px; z-index:10;
+  }
+  .modal-overlay.show{display:flex;}
+  .modal{
+    background:var(--panel); border:1px solid var(--border); border-radius:16px;
+    padding:20px; width:100%; max-width:380px; position:relative;
+  }
+  .modal h2{margin:0 0 14px; font-size:18px; text-align:center; color:var(--accent);}
+  .modal-close{
+    position:absolute; top:12px; right:14px; background:none; border:none;
+    color:var(--muted); font-size:18px; padding:0; cursor:pointer;
+  }
+  .stats-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:18px;}
+  .stats-grid div{text-align:center;}
+  .stats-grid .num{font-size:24px; font-weight:800; color:var(--text);}
+  .stats-grid .lbl{font-size:11px; color:var(--muted); margin-top:2px;}
+  .dist-row{display:flex; align-items:center; gap:8px; margin:4px 0; font-size:12px;}
+  .dist-row .n{width:10px; color:var(--muted);}
+  .dist-row .bar{flex:1; background:var(--panel2); border-radius:4px; overflow:hidden; height:18px;}
+  .dist-row .fill{background:var(--accent); height:100%; min-width:18px; display:flex; align-items:center; justify-content:flex-end; padding-right:6px; color:#08211a; font-weight:700; font-size:11px;}
+  .dist-row .fill.zero{background:var(--panel2); min-width:0;}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>NEGLE</h1>
+  <div class="title-row">
+    <h1>NEGLE</h1>
+    <button class="stats-btn" id="statsBtn" title="Stats">📊</button>
+  </div>
   <div class="sub">its neighbors are all in place. the country itself is a blank. name what's missing.</div>
 
   <div class="mode-row">
@@ -135,6 +166,20 @@
       <button class="secondary" id="giveUpBtn">Give up</button>
       <button id="newGameBtn" style="display:none;">Play again</button>
     </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="statsOverlay">
+  <div class="modal">
+    <button class="modal-close" id="statsClose">✕</button>
+    <h2>Statistics</h2>
+    <div class="stats-grid">
+      <div><div class="num" id="statPlayed">0</div><div class="lbl">Played</div></div>
+      <div><div class="num" id="statWinPct">0</div><div class="lbl">Win %</div></div>
+      <div><div class="num" id="statStreak">0</div><div class="lbl">Streak</div></div>
+      <div><div class="num" id="statMaxStreak">0</div><div class="lbl">Max streak</div></div>
+    </div>
+    <div id="statDist"></div>
   </div>
 </div>
 
@@ -391,6 +436,62 @@ function endGame(won){
   banner.style.display = 'block';
   document.getElementById('winTitle').textContent = won ? '🎯 ' + target.name + '!' : 'It was ' + target.name;
   document.getElementById('winSub').textContent = won ? ('Solved in ' + guesses.length + ' guess' + (guesses.length===1?'':'es')) : 'Better luck next time';
+
+  if (isDaily){
+    const recorded = recordDailyResult(won, guesses.length);
+    if (recorded) openStats();
+  }
+}
+
+const STATS_KEY = 'negle-stats';
+function loadStats(){
+  try {
+    const raw = localStorage.getItem(STATS_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(e){}
+  return {gamesPlayed:0, gamesWon:0, currentStreak:0, maxStreak:0, guessDistribution:[0,0,0,0,0,0], lastPuzzleNum:null};
+}
+function saveStats(stats){
+  try { localStorage.setItem(STATS_KEY, JSON.stringify(stats)); } catch(e){}
+}
+function recordDailyResult(won, guessCount){
+  const stats = loadStats();
+  const puzzleNum = dailyPuzzleNumber();
+  if (stats.lastPuzzleNum === puzzleNum) return false; // already recorded today
+
+  stats.gamesPlayed += 1;
+  if (won){
+    stats.gamesWon += 1;
+    stats.currentStreak = (stats.lastPuzzleNum === puzzleNum - 1) ? stats.currentStreak + 1 : 1;
+    stats.maxStreak = Math.max(stats.maxStreak, stats.currentStreak);
+    stats.guessDistribution[guessCount-1] += 1;
+  } else {
+    stats.currentStreak = 0;
+  }
+  stats.lastPuzzleNum = puzzleNum;
+  saveStats(stats);
+  return true;
+}
+function renderStats(){
+  const stats = loadStats();
+  const winPct = stats.gamesPlayed ? Math.round(100 * stats.gamesWon / stats.gamesPlayed) : 0;
+  document.getElementById('statPlayed').textContent = stats.gamesPlayed;
+  document.getElementById('statWinPct').textContent = winPct;
+  document.getElementById('statStreak').textContent = stats.currentStreak;
+  document.getElementById('statMaxStreak').textContent = stats.maxStreak;
+  const maxCount = Math.max(1, ...stats.guessDistribution);
+  document.getElementById('statDist').innerHTML = stats.guessDistribution.map((count, i) => {
+    const pct = Math.round(100 * count / maxCount);
+    return '<div class="dist-row"><span class="n">'+(i+1)+'</span>'+
+      '<div class="bar"><div class="fill'+(count===0?' zero':'')+'" style="width:'+(count===0?0:pct)+'%">'+(count||'')+'</div></div></div>';
+  }).join('');
+}
+function openStats(){
+  renderStats();
+  document.getElementById('statsOverlay').classList.add('show');
+}
+function closeStats(){
+  document.getElementById('statsOverlay').classList.remove('show');
 }
 
 document.getElementById('guessBtn').addEventListener('click', submitGuess);
@@ -400,6 +501,9 @@ document.getElementById('dailyModeBtn').addEventListener('click', () => newGame(
 document.getElementById('practiceModeBtn').addEventListener('click', () => newGame(false));
 document.getElementById('giveUpBtn').addEventListener('click', () => endGame(false));
 document.getElementById('newGameBtn').addEventListener('click', () => newGame(isDaily));
+document.getElementById('statsBtn').addEventListener('click', openStats);
+document.getElementById('statsClose').addEventListener('click', closeStats);
+document.getElementById('statsOverlay').addEventListener('click', e => { if (e.target.id === 'statsOverlay') closeStats(); });
 window.addEventListener('resize', () => { layout(); });
 
 document.getElementById('countryList').innerHTML = DATA.countries.map(c => '<option value="'+c.name+'">').join('');
